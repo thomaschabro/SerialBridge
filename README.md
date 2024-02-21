@@ -7,3 +7,7 @@ Firstly, the firmware reads the data via UART by default, in the code, it is use
 To open and read the messages received on the broker, in a computer, it is necessary that the pc is connected to the same wifi of the ESP32. Then, you can run the command
   mosquitto_sub -h mqtt.eclipseprojects.io -t my_topic
 and the messages will be printed in the kernel.
+
+NOTE: 
+
+It is important to change the configuration of Wifi on the code, replacing SSID by the SSID (name) of your wifi network, and the PASSWORD by the actual password of the network.
