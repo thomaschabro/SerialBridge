@@ -33,9 +33,10 @@
 #define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
 #define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
 
-#define BUF_SIZE (1024)
+#define BUF_SIZE (1024 * 2)
 
 static const char *TAG = "MQTT_TCP";
+int64_t reset_time = 60 * 60; // 1 hour
 
 esp_mqtt_client_handle_t client;
 
@@ -73,8 +74,8 @@ void wifi_connection()
     esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, NULL);
     wifi_config_t wifi_configuration = {
         .sta = {
-            .ssid = "GERA/DIEL",
-            .password = "G&r@D!&L2506",}};
+            .ssid = "devac",
+            .password = "D20f35r0219",}};
     esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_configuration);
     // 3 - Wi-Fi Start Phase
     esp_wifi_start();
@@ -89,8 +90,8 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     {
     case MQTT_EVENT_CONNECTED:
         // ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        esp_mqtt_client_subscribe(client, "my_topic", 0);
-        esp_mqtt_client_publish(client, "my_topic", "Connection stablished! Initial message to broker.", 0, 1, 0);
+        esp_mqtt_client_subscribe(client, "log/DUT302232311", 0);
+        esp_mqtt_client_publish(client, "log/DUT302232311", "Connection stablished! Initial message to broker.", 0, 1, 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
         // ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
@@ -119,7 +120,7 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
     return ESP_OK;
 }
 
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)   
 {
     mqtt_event_handler_cb(event_data);
 }
@@ -147,6 +148,7 @@ static void echo_task()
     };
     // Define source clock on uart_config_t
     uart_config.source_clk = UART_SCLK_DEFAULT;
+    int64_t actual_time = 0;
 
     uart_param_config(UART_NUM_2, &uart_config);
     uart_set_pin(UART_NUM_2, ECHO_TEST_TXD, ECHO_TEST_RXD, ECHO_TEST_RTS, ECHO_TEST_CTS);
@@ -155,14 +157,20 @@ static void echo_task()
     while (1) {
         // Read data from the UART
         uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
-        int len = uart_read_bytes(UART_NUM_2, data, BUF_SIZE, 0);
+        int len = uart_read_bytes(UART_NUM_2, data, BUF_SIZE - 1, 0);
         if (len > 0) {
             data[len] = 0;
             ESP_LOGI("", "%s", data);
-            esp_mqtt_client_publish(client, "my_topic", (const char *)data, 0, 1, 0);
+            esp_mqtt_client_publish(client, "log/DUT302232311", (const char *)data, 0, 1, 0);
         }
         free(data); 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);        
+        actual_time = esp_timer_get_time();
+        vTaskDelay(1000 / portTICK_PERIOD_MS); 
+
+        if (actual_time > reset_time * 1000000) {
+            esp_restart();
+        }
+
     }
 }
 
